@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: telecomx-ingress
+  namespace: telecomx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: telecomx.local   # point at your cluster's ingress IP via /etc/hosts for local testing
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service: { name: api-gateway, port: { number: 8080 } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: admin-dashboard, port: { number: 80 } }

@@ -1,0 +1,100 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: billing-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/billingdb
+    username: telecomx
+    password: telecomx
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: billing-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "com.telecomx.*"
+        spring.json.type.mapping: "subscriberProvisioned:com.telecomx.billing.event.SubscriberProvisionedEvent,usageRecorded:com.telecomx.billing.event.UsageRecordedEvent"
+        spring.json.use.type.headers: true
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        spring.json.type.mapping: "invoiceGenerated:com.telecomx.billing.event.InvoiceGeneratedEvent,paymentFailed:com.telecomx.billing.event.PaymentFailedEvent"
+        spring.json.add.type.headers: true
+
+topics:
+  subscriber-provisioned: subscriber.provisioned
+  usage-recorded: usage.recorded
+  invoice-generated: invoice.generated
+  payment-failed: payment.failed
+
+jwt:
+  secret: "dGVsZWNvbXgtcGxhdGZvcm0tc3VwZXItc2VjcmV0LWtleS1jaGFuZ2UtbWUtaW4tcHJvZC0zMg=="
+
+billing:
+  max-consecutive-payment-failures-before-suspend-signal: 3
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      cors:
+        allowed-origins: "*"
+        allowed-methods: GET
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{traceId:-},%X{spanId:-}] %-5level %logger{36} - %msg%n"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+management:
+  zipkin:
+    tracing:
+      endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT}

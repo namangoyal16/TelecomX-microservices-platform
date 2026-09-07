@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-dashboard
+  namespace: telecomx
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: admin-dashboard } }
+  template:
+    metadata: { labels: { app: admin-dashboard } }
+    spec:
+      containers:
+        - name: admin-dashboard
+          image: ghcr.io/your-org/telecomx-admin-dashboard:latest
+          ports: [{ containerPort: 80 }]
+          resources:
+            requests: { cpu: "50m", memory: "64Mi" }
+            limits: { cpu: "150m", memory: "128Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: admin-dashboard, namespace: telecomx }
+spec:
+  selector: { app: admin-dashboard }
+  ports: [{ port: 80, targetPort: 80 }]

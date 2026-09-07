@@ -1,0 +1,140 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Build + test each Spring Boot service in parallel via a matrix, instead of
+  # one monolithic job - a failure in billing-service shouldn't block seeing
+  # whether customer-service's tests pass, and independent jobs mirror the
+  # fact that these are independently deployable services.
+  # -------------------------------------------------------------------------
+  build-and-test-java:
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - customer-service
+          - provisioning-service
+          - usage-service
+          - billing-service
+          - notification-service
+          - api-gateway
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Unit + integration tests (Testcontainers)
+        # Testcontainers spins up REAL Postgres/Kafka/Mongo instances in CI for
+        # services that declare those dependencies - not mocks - so retry/DLQ,
+        # idempotency, and query behavior are verified against the real thing.
+        working-directory: ${{ matrix.service }}
+        run: mvn -B clean verify
+
+      - name: Build jar
+        working-directory: ${{ matrix.service }}
+        run: mvn -B clean package -DskipTests
+
+      - name: Upload jar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-jar
+          path: ${{ matrix.service }}/target/*.jar
+          retention-days: 3
+
+  build-and-test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: admin-dashboard/package.json
+      - working-directory: admin-dashboard
+        run: npm install
+      - working-directory: admin-dashboard
+        run: npm run build
+
+  # -------------------------------------------------------------------------
+  # Docker build + push - only on main (not PRs), and only after tests pass.
+  # -------------------------------------------------------------------------
+  docker-build-push:
+    needs: [build-and-test-java, build-and-test-frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - customer-service
+          - provisioning-service
+          - usage-service
+          - billing-service
+          - notification-service
+          - api-gateway
+          - admin-dashboard
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/telecomx-${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/telecomx-${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # -------------------------------------------------------------------------
+  # Optional: deploy to a staging namespace on successful merge to main.
+  # Requires a KUBE_CONFIG repo secret (base64 kubeconfig) to be configured.
+  # -------------------------------------------------------------------------
+  deploy-staging:
+    needs: docker-build-push
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        if: ${{ secrets.KUBE_CONFIG != '' }}
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+
+      - name: Apply manifests
+        if: ${{ secrets.KUBE_CONFIG != '' }}
+        run: kubectl apply -f k8s/
+
+      - name: Skipped (no cluster configured)
+        if: ${{ secrets.KUBE_CONFIG == '' }}
+        run: echo "KUBE_CONFIG secret not set - skipping deploy step. Configure it to enable auto-deploy to staging."

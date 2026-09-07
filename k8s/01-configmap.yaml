@@ -1,0 +1,14 @@
+# Non-secret, shared configuration every service reads via envFrom.
+# Kept in one ConfigMap because these values (broker address, tracing endpoint)
+# are genuinely shared infrastructure coordinates, not per-service business config.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: telecomx-shared-config
+  namespace: telecomx
+data:
+  SPRING_PROFILES_ACTIVE: "docker"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka.telecomx.svc.cluster.local:9092"
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://zipkin.telecomx.svc.cluster.local:9411/api/v2/spans"
+  SPRING_DATA_REDIS_HOST: "redis.telecomx.svc.cluster.local"
+  SPRING_DATA_MONGODB_URI: "mongodb://mongodb.telecomx.svc.cluster.local:27017/usagedb"

@@ -1,0 +1,268 @@
+/* ===========================================================================
+   TelecomX Ops Console - design tokens
+   Direction: a network-operations-center readout, not a generic SaaS dashboard.
+   Deep navy field (like a rack display), signal-bar motif in the header,
+   monospace for anything that's a live metric (mirrors how signal strength /
+   throughput is read on real telecom equipment), sans for UI chrome.
+   Status is conveyed by a colored left rail on each panel, not by uniform
+   rounded shadow-cards.
+=========================================================================== */
+
+:root {
+  --bg: #0A0E17;
+  --panel: #10182B;
+  --panel-border: #1D2A44;
+  --text: #E4E9F2;
+  --text-muted: #6B7A99;
+  --signal-green: #3DDC84;
+  --signal-amber: #F5A623;
+  --signal-red: #EF5350;
+  --accent: #5B8DEF;
+  --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  background-image:
+    linear-gradient(180deg, rgba(91,141,239,0.06) 0%, transparent 220px);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { min-height: 100vh; }
+
+.app-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 24px 64px;
+}
+
+/* ---- Header / signal-bar motif ---- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 22px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 22px;
+}
+
+.brand-bars span {
+  width: 4px;
+  background: var(--signal-green);
+  border-radius: 1px;
+  display: inline-block;
+}
+.brand-bars span:nth-child(1) { height: 6px; }
+.brand-bars span:nth-child(2) { height: 11px; }
+.brand-bars span:nth-child(3) { height: 16px; }
+.brand-bars span:nth-child(4) { height: 22px; }
+
+.brand-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.brand-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+}
+
+.env-pill {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--signal-green);
+  border: 1px solid rgba(61,220,132,0.35);
+  background: rgba(61,220,132,0.08);
+  padding: 4px 10px;
+  border-radius: 3px;
+}
+
+/* ---- Panels ---- */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  padding: 18px 20px;
+}
+.panel.status-ok { border-left-color: var(--signal-green); }
+.panel.status-warn { border-left-color: var(--signal-amber); }
+.panel.status-error { border-left-color: var(--signal-red); }
+
+.panel-title {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 6px;
+  font-weight: 500;
+}
+
+.panel-metric {
+  font-family: var(--mono);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.panel-metric-unit {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-left: 6px;
+  font-weight: 400;
+}
+
+/* ---- Grid ---- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+@media (max-width: 900px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .two-col { grid-template-columns: 1fr; }
+}
+
+section.block {
+  margin-bottom: 24px;
+}
+
+.block-heading {
+  font-size: 13px;
+  text-transform: none;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  font-weight: 500;
+}
+
+/* ---- Tables / lists ---- */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 11px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--panel-border);
+}
+td {
+  padding: 8px 8px;
+  border-bottom: 1px solid rgba(29,42,68,0.6);
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+tr:last-child td { border-bottom: none; }
+
+.badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.badge-active, .badge-paid, .badge-success { color: var(--signal-green); background: rgba(61,220,132,0.1); }
+.badge-pending, .badge-inprogress { color: var(--signal-amber); background: rgba(245,166,35,0.1); }
+.badge-suspended, .badge-failed, .badge-down { color: var(--signal-red); background: rgba(239,83,80,0.1); }
+
+/* ---- Health grid ---- */
+.health-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 4px;
+  border-bottom: 1px solid rgba(29,42,68,0.6);
+}
+.health-row:last-child { border-bottom: none; }
+.health-name { font-size: 13px; }
+.health-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; margin-right: 8px;
+}
+.dot-up { background: var(--signal-green); box-shadow: 0 0 6px rgba(61,220,132,0.7); }
+.dot-down { background: var(--signal-red); box-shadow: 0 0 6px rgba(239,83,80,0.7); }
+.dot-unknown { background: var(--text-muted); }
+
+/* ---- Notifications feed ---- */
+.notif-item {
+  padding: 10px 4px;
+  border-bottom: 1px solid rgba(29,42,68,0.6);
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-subject { font-size: 13px; font-weight: 600; }
+.notif-message { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+.notif-meta { font-family: var(--mono); font-size: 10.5px; color: var(--text-muted); margin-top: 4px; }
+
+/* ---- Login ---- */
+.login-shell {
+  max-width: 360px;
+  margin: 12vh auto;
+  padding: 28px;
+}
+.login-title { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+.login-sub { font-size: 13px; color: var(--text-muted); margin: 0 0 20px; }
+input {
+  width: 100%;
+  background: #0D1424;
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 3px;
+  font-family: var(--sans);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+button {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 10px 12px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:hover { background: #4a7bdb; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.error-text { color: var(--signal-red); font-size: 12.5px; margin: 8px 0; }
+.muted { color: var(--text-muted); font-size: 12.5px; }
+
+.logout-link {
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  color: var(--text-muted);
+  width: auto;
+  padding: 6px 12px;
+  font-weight: 500;
+}
+.logout-link:hover { color: var(--text); border-color: var(--accent); background: transparent; }

@@ -1,0 +1,75 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: usage-service
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/usagedb
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        spring.json.type.mapping: "usageRecorded:com.telecomx.usage.event.UsageRecordedEvent"
+        spring.json.add.type.headers: true
+
+topics:
+  usage-recorded: usage.recorded
+
+jwt:
+  secret: "dGVsZWNvbXgtcGxhdGZvcm0tc3VwZXItc2VjcmV0LWtleS1jaGFuZ2UtbWUtaW4tcHJvZC0zMg=="
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      cors:
+        allowed-origins: "*"
+        allowed-methods: GET
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{traceId:-},%X{spanId:-}] %-5level %logger{36} - %msg%n"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+management:
+  zipkin:
+    tracing:
+      endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT}

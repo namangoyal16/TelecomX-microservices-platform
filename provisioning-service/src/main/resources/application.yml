@@ -1,0 +1,109 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: provisioning-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/provisioningdb
+    username: telecomx
+    password: telecomx
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: provisioning-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "com.telecomx.*"
+        spring.json.type.mapping: "subscriptionRequested:com.telecomx.provisioning.event.SubscriptionRequestedEvent,paymentFailed:com.telecomx.provisioning.event.PaymentFailedEvent"
+        spring.json.use.type.headers: true
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        spring.json.type.mapping: "subscriberProvisioned:com.telecomx.provisioning.event.SubscriberProvisionedEvent"
+        spring.json.add.type.headers: true
+
+topics:
+  subscription-requested: subscription.requested
+  subscriber-provisioned: subscriber.provisioned
+  payment-failed: payment.failed
+  subscription-requested-dlt: subscription.requested.DLT
+
+jwt:
+  secret: "dGVsZWNvbXgtcGxhdGZvcm0tc3VwZXItc2VjcmV0LWtleS1jaGFuZ2UtbWUtaW4tcHJvZC0zMg=="
+
+cache:
+  subscriber-status-ttl-seconds: 300  # active-status cache entries expire after 5 min
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      cors:
+        allowed-origins: "*"
+        allowed-methods: GET
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{traceId:-},%X{spanId:-}] %-5level %logger{36} - %msg%n"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+management:
+  zipkin:
+    tracing:
+      endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT}
